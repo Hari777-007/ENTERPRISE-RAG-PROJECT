@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    openai_api_key: str = "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"
+    openai_api_key: str = ""
     llm_model_answer: str = "gpt-4o"
     llm_model_grader: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-small"
