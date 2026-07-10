@@ -82,7 +82,7 @@ def main() -> None:
                 "contexts": [c.text for c in chunks],
                 "ground_truth": ", ".join(g.golden_answer_keywords),
                 "actual_sources": resp.sources,
-                "golden_sources": g.golden_sources,
+                "golden_sources": g.golden_sources,# this is used to check the context recall metrics
                 "forbidden_keywords": g.forbidden_keywords,
             }
         )

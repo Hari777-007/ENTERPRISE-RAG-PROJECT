@@ -9,22 +9,37 @@ from app.services.embedding_service import embed_texts
 from app.services.llm_service import generate
 from app.services.vector_store import search,hybrid_search,sparse_search
 from loguru import logger 
+from app.config import settings
+from app.services.reranking import Reranker
 
+def _enable_rerank(flags:dict | None)-> bool:
+    if not isinstance(flags,dict):
+        return False
+    return bool(flags.get("enable_rerank",False))    
 
 def _retrieve(question:str , flags:dict | int |None=None)-> list[RetrievedChunk]:
-    top_k = _top_k_from_flags(flags)
+    final_top_k = _top_k_from_flags(flags)
     mode=_search_mode(flags)
+    rerank=_enable_rerank(flags)
+    retrieve_k=settings.reranker_initial_top_k if rerank else final_top_k
+
+
     if mode=="sparse":
-        return sparse_search(question,top_k=top_k)
-    if mode=="hybrid":
+        return sparse_search(question,top_k=retrieve_k)
+    elif mode=="hybrid":
         query_embedding= embed_texts([question])[0]
-        return hybrid_search(query_embedding,question,top_k=top_k)
+        chunks=hybrid_search(query_embedding,question,top_k=retrieve_k)
+    else:
+        query_embedding= embed_texts([question])[0]
+        chunks=search(query_embedding,top_k=retrieve_k)
 
+    if rerank and chunks:
+        chunks=Reranker().rerank(question,chunks,top_k=final_top_k)
+    else:
+        chunks=chunks[:final_top_k]
+          # Ensure we only return the top_k chunks if reranking is not enabled 
+    return chunks      
 
-    # default to dense search        
-
-    query_embedding= embed_texts([question])[0]
-    return search(query_embedding,top_k=top_k)
 
 def _generate(question:str,chunks:list[RetrievedChunk])->ChatResponse:
     spotlighted=build_spotlighted_context(chunks)
@@ -55,14 +70,15 @@ def _search_mode(flags:dict | None)-> str:
     return flags.get("search_mode","dense")        
 
 def run_rag(question:str,flags:dict | int |None=None)->ChatResponse:
-    mode=_search_mode(flags if isinstance(flags,dict) else "dense")
+    mode=_search_mode(flags) if isinstance(flags,dict) else "dense"
+    rerank=_enable_rerank(flags) if isinstance(flags,dict) else False
     chunks=_retrieve(question,flags=flags if isinstance(flags,dict) else None)
     return _generate(question,chunks)
 
 
 def run_rag_with_trace(question:str,flags:dict | int |None=None)->tuple[ChatResponse,list[RetrievedChunk]]:
     # this function is for evaluation purposes, it returns the retrieved chunks along with the response
-    top_k=_top_k_from_flags(flags)
+
     chunks=_retrieve(question,flags=flags if isinstance(flags,dict) else None)
     response= _generate(question,chunks)
     return response,chunks
