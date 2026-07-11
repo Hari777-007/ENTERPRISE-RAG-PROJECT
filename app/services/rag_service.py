@@ -11,27 +11,35 @@ from app.services.vector_store import search,hybrid_search,sparse_search
 from loguru import logger 
 from app.config import settings
 from app.services.reranking import Reranker
+from app.services.hyde import HyDERetriever
 
-def _enable_rerank(flags:dict | None)-> bool:
+  
+
+
+def _flag(flags:dict |None,key:str,default):
     if not isinstance(flags,dict):
-        return False
-    return bool(flags.get("enable_rerank",False))    
+        return default
+    return flags.get(key,default)
 
 def _retrieve(question:str , flags:dict | int |None=None)-> list[RetrievedChunk]:
-    final_top_k = _top_k_from_flags(flags)
-    mode=_search_mode(flags)
-    rerank=_enable_rerank(flags)
-    retrieve_k=settings.reranker_initial_top_k if rerank else final_top_k
+    final_top_k = int(_flag(flags,"top_k",5))
+    mode=_flag(flags,"search_mode","dense")
+    rerank=bool(_flag(flags,"enable_rerank",False))
+    hyde=bool(_flag(flags,"enable_hyde",False))
+    retrieve_k=settings.reranker_initial_top_k if rerank else final_top_k\
+
+    if hyde:
+        chunks=HyDERetriever().retrieve(question,top_k=retrieve_k)    
 
 
-    if mode=="sparse":
+    elif mode=="sparse":
         return sparse_search(question,top_k=retrieve_k)
     elif mode=="hybrid":
         query_embedding= embed_texts([question])[0]
         chunks=hybrid_search(query_embedding,question,top_k=retrieve_k)
     else:
         query_embedding= embed_texts([question])[0]
-        chunks=search(query_embedding,top_k=retrieve_k)
+        chunks=search(query_embedding,top_k=retrieve_k) # DENSE search is the default search mode, which uses vector embeddings to find the most relevant chunks based on semantic similarity to the query.
 
     if rerank and chunks:
         chunks=Reranker().rerank(question,chunks,top_k=final_top_k)
@@ -57,21 +65,11 @@ def _generate(question:str,chunks:list[RetrievedChunk])->ChatResponse:
             retrieved_chunks=chunk_previews))
 
 
-def _top_k_from_flags(flags:dict | int |None)-> int:
-    if flags is None:
-        return 5
-    if isinstance(flags,int):
-        return flags
-    return int(flags.get("top_k",5))
-
-def _search_mode(flags:dict | None)-> str:
-    if not isinstance(flags,dict):
-        return "dense"
-    return flags.get("search_mode","dense")        
+     
 
 def run_rag(question:str,flags:dict | int |None=None)->ChatResponse:
-    mode=_search_mode(flags) if isinstance(flags,dict) else "dense"
-    rerank=_enable_rerank(flags) if isinstance(flags,dict) else False
+    logger.info("L4 RAG | mode={} rerank={} hyde={} top_k={}",_flag(flags,"search_mode","dense"),_flag(flags,"enable_rerank",False),
+    _flag(flags,"enable_hyde",False),_flag(flags,"top_k",5))
     chunks=_retrieve(question,flags=flags if isinstance(flags,dict) else None)
     return _generate(question,chunks)
 

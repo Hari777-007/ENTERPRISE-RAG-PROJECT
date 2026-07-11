@@ -63,6 +63,7 @@ class QueryRequest(BaseModel):
     enable_rerank:bool=False
     top_k: int = Field(default=5, ge=1, le=50)
     search_mode:Literal["dense","sparse","hybrid"]="dense"
+    enable_hyde:bool=False
    
     @field_validator("question")
     @classmethod
