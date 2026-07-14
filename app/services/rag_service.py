@@ -12,6 +12,7 @@ from loguru import logger
 from app.config import settings
 from app.services.reranking import Reranker
 from app.services.hyde import HyDERetriever
+from app.services.crag import crag_pipeline
 
   
 
@@ -26,7 +27,9 @@ def _retrieve(question:str , flags:dict | int |None=None)-> list[RetrievedChunk]
     mode=_flag(flags,"search_mode","dense")
     rerank=bool(_flag(flags,"enable_rerank",False))
     hyde=bool(_flag(flags,"enable_hyde",False))
-    retrieve_k=settings.reranker_initial_top_k if rerank else final_top_k\
+    retrieve_k=settings.reranker_initial_top_k if rerank else final_top_k
+    enable_crag=bool(_flag(flags,"enable_crag",settings.crag_enabled_by_default))
+
 
     if hyde:
         chunks=HyDERetriever().retrieve(question,top_k=retrieve_k)    
@@ -46,7 +49,9 @@ def _retrieve(question:str , flags:dict | int |None=None)-> list[RetrievedChunk]
     else:
         chunks=chunks[:final_top_k]
           # Ensure we only return the top_k chunks if reranking is not enabled 
-    return chunks      
+    chunks,evaluation,used_web=crag_pipeline(question=question,chunks=chunks,enable_crag=enable_crag)
+    logger.info("CRAG | enabled={} score={}  label={}, used_web={}",enable_crag,evaluation.relevance_score,evaluation.relevance_label,used_web)
+    return chunks   
 
 
 def _generate(question:str,chunks:list[RetrievedChunk])->ChatResponse:
@@ -68,8 +73,10 @@ def _generate(question:str,chunks:list[RetrievedChunk])->ChatResponse:
      
 
 def run_rag(question:str,flags:dict | int |None=None)->ChatResponse:
-    logger.info("L4 RAG | mode={} rerank={} hyde={} top_k={}",_flag(flags,"search_mode","dense"),_flag(flags,"enable_rerank",False),
-    _flag(flags,"enable_hyde",False),_flag(flags,"top_k",5))
+    logger.info("L5 RAG | search_mode={} rerank={} hyde={} crag={} top_k={}",_flag(flags,"search_mode","dense"),
+    _flag(flags,"enable_rerank",False),
+    _flag(flags,"enable_hyde",False),_flag
+    (flags,"enable_crag",settings.crag_enabled_by_default),_flag(flags,"top_k",5))
     chunks=_retrieve(question,flags=flags if isinstance(flags,dict) else None)
     return _generate(question,chunks)
 

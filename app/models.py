@@ -64,6 +64,7 @@ class QueryRequest(BaseModel):
     top_k: int = Field(default=5, ge=1, le=50)
     search_mode:Literal["dense","sparse","hybrid"]="dense"
     enable_hyde:bool=False
+    enable_crag:bool=True
    
     @field_validator("question")
     @classmethod
@@ -92,4 +93,11 @@ class RetrievedChunk(BaseModel):
     text: str
     source: str
     score: float = 0.0
+
+
+class CRAGEvaluation(BaseModel):
+    relevance_score:float=0.0
+    relevance_label:str=""
+    confidence:float=0.0
+    reasoning:str=""
 
