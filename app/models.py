@@ -40,6 +40,10 @@ class RetrievedChunkPreview(BaseModel):
 class ResponseMetadata(BaseModel):
     route: str = "rag"
     retrieved_chunks: list[RetrievedChunkPreview] = Field(default_factory=list)
+    reflection_iteration:int=0
+    reflection_score:float|None=None
+    refined_question:str|None=None
+
   
 
 
@@ -65,6 +69,7 @@ class QueryRequest(BaseModel):
     search_mode:Literal["dense","sparse","hybrid"]="dense"
     enable_hyde:bool=False
     enable_crag:bool=True
+    enable_self_reflective:bool=False
    
     @field_validator("question")
     @classmethod
@@ -100,4 +105,12 @@ class CRAGEvaluation(BaseModel):
     relevance_label:str=""
     confidence:float=0.0
     reasoning:str=""
+
+
+class ReflectionResult(BaseModel):
+    reflection_score:float=0.0
+    needs_regeneration:bool=False
+    refined_question:str=""
+    reasoning:str=""
+    
 
