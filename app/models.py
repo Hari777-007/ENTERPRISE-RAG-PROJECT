@@ -45,6 +45,11 @@ class ResponseMetadata(BaseModel):
     refined_question:str|None=None
 
   
+class PendingSQLBlock(BaseModel):
+    sql:str
+    query_id:str
+    explanation:str=""
+
 
 
 
@@ -53,8 +58,8 @@ class ChatResponse(BaseModel):
     answer: str = Field(..., min_length=0)
     sources: list[str] = Field(default_factory=list)
     confidence: float = Field(..., ge=0.0, le=1.0)
-  
     metadata: ResponseMetadata = Field(default_factory=ResponseMetadata)
+    pending_sql:PendingSQLBlock | None=None
 
 
 class QueryRequest(BaseModel):
@@ -113,4 +118,3 @@ class ReflectionResult(BaseModel):
     refined_question:str=""
     reasoning:str=""
     
-
