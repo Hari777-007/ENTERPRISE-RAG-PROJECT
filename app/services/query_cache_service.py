@@ -71,7 +71,7 @@ class QueryCacheService:
             except Exception:
                 logger.exception("Redis get failed for tier=%s key=%s", tier, key)
 
-        with self._lock:
+        with self._lock: # prevent the threads from updating the dict at the same time
             current = self._memory_store.get(key)
             if current is None:
                 self._record(tier, "misses")

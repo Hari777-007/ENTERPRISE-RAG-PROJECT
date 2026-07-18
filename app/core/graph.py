@@ -152,7 +152,7 @@ def _generate_hybrid_answer(state: GraphState) -> dict:
     )
     user_msg = f"{sql_section}{rag_section}\n\nQuestion: {state['question']}"
 
-    result = generate(system, user_msg)
+    result = generate(system, user_msg) #normal generation without self reflection
     return {
         "final_answer": result["text"],
         "sources": ["database query"] + state.get("retrieved_chunks", []),

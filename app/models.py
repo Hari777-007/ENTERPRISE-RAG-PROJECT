@@ -40,7 +40,8 @@ class RetrievedChunkPreview(BaseModel):
 class ResponseMetadata(BaseModel):
     route: str = "rag"
     retrieved_chunks: list[RetrievedChunkPreview] = Field(default_factory=list)
-    reflection_iteration:int=0
+    cache_hit:bool=False
+    reflection_iterations:int=0
     reflection_score:float|None=None
     refined_question:str|None=None
 
@@ -58,8 +59,10 @@ class ChatResponse(BaseModel):
     answer: str = Field(..., min_length=0)
     sources: list[str] = Field(default_factory=list)
     confidence: float = Field(..., ge=0.0, le=1.0)
-    metadata: ResponseMetadata = Field(default_factory=ResponseMetadata)
     pending_sql:PendingSQLBlock | None=None
+    cache_hit:bool=False
+    cost_saved:str="$0.00"
+    metadata: ResponseMetadata = Field(default_factory=ResponseMetadata)
 
 
 class QueryRequest(BaseModel):

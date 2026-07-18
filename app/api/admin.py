@@ -8,6 +8,8 @@ from app.config import settings
 
 
 from app.middleware.auth import User, require_admin
+from app.middleware.auth import User,require_admin
+from app.services.query_cache_service import query_cache
 
 
 
@@ -109,5 +111,32 @@ async def health_check() -> dict[str, Any]:
     }
 
 
+@router.get("/admin/cache/stats")
+async def cache_stats(user: User = Depends(require_admin)) -> dict:
+    """Return per-cache hit/miss/set counts."""
+    raw = query_cache.stats()
 
+    def _tier(name: str) -> dict:
+        return {
+            "hits": int(raw.get(name, {}).get("hits", 0)),
+            "misses": int(raw.get(name, {}).get("misses", 0)),
+            "sets": int(raw.get(name, {}).get("sets", 0)),
+            "hit_rate": float(raw.get(name, {}).get("hit_rate", 0.0)),
+        }
+
+    return {
+        "embedding": _tier("embedding"),
+        "rag": _tier("rag_answer"),
+        "sql_gen": _tier("sql_gen"),
+        "sql_result": _tier("sql_result"),
+        "intent_router": _tier("intent"),
+    }
+
+
+
+@router.post("/admin/cache/clear") #TTL- "time to live" WILL AUTOMATICALLY CLEAR THE REDIS CACHE FOR LOCAL CACHE WE NEED MANULA CLEARING
+async def cache_clear(user: User = Depends(require_admin)) -> dict:
+    """Clear all caches (Redis + in-memory)."""
+    cleared = query_cache.clear()
+    return {"status": "ok", "cleared": cleared}
 

@@ -63,7 +63,9 @@ async def query(
     response = ChatResponse(
         answer=result.get("final_answer", ""),
         sources=result.get("sources", []),
-        confidence=result.get("confidence", 0.0)
+        confidence=result.get("confidence", 0.0),
+        cache_hit=result.get("cache_hit",False),
+        metadata=result.get("metadata",{})
     )
 
 
@@ -87,4 +89,7 @@ async def execute_sql( #Resume the paused graph after human approves or rejects 
         answer=result.get("final_answer", "SQL query was not approved."),
         sources=result.get("sources", []),
         confidence=result.get("confidence", 0.0),
+        cache_hit=result.get("cache_hit",False),
+        metadata=result.get("metadata",{})
+
     )
