@@ -65,14 +65,14 @@ def restructure_input(text: str) -> tuple[str, str]:
 
     Rules from PRD:
     - ≤ 3000 tokens: original
-    - 3000–6000 tokens: truncated to 3000
+    - 3000-6000 tokens: truncated to 3000
     - > 6000 tokens: summarized to 3000
 
     Returns (restructured_text, method_label).
     """
     tokens = count_tokens(text)
     max_input = settings.max_input_tokens
-    reserved = settings.reserved_context_tokens
+    reserved = settings.reserved_context_tokens # reserved for System prompt, Retrieved RAG documents ,Model response
     effective_limit = max_input - reserved
 
     if tokens <= effective_limit:
